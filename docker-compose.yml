@@ -1,0 +1,187 @@
+version: '3.8'
+
+name: recoverai
+
+networks:
+  recoverai-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  immudb_data:
+    driver: local
+  temporal_data:
+    driver: local
+
+services:
+  # ---------------------------------------------------------------------------
+  # Operational Database: PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: recoverai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-recovery_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-recovery_pass_secure_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-recovery_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - recoverai-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-recovery_admin} -d ${POSTGRES_DB:-recovery_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Durable Workflow Orchestration: Temporal Server
+  # ---------------------------------------------------------------------------
+  temporal:
+    image: temporalio/auto-setup:1.24.2
+    container_name: recoverai-temporal
+    restart: unless-stopped
+    ports:
+      - "7233:7233"
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-recovery_admin}
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:-recovery_pass_secure_dev}
+      - POSTGRES_SEEDS=postgres
+    volumes:
+      - temporal_data:/etc/temporal
+    networks:
+      - recoverai-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Temporal Web UI (Dashboard)
+  # ---------------------------------------------------------------------------
+  temporal-ui:
+    image: temporalio/ui:2.28.0
+    container_name: recoverai-temporal-ui
+    restart: unless-stopped
+    ports:
+      - "8233:8080"
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    networks:
+      - recoverai-network
+    depends_on:
+      - temporal
+
+  # ---------------------------------------------------------------------------
+  # Cryptographic Audit Ledger: immudb
+  # ---------------------------------------------------------------------------
+  immudb:
+    image: codenotary/immudb:1.9.5
+    container_name: recoverai-immudb
+    restart: unless-stopped
+    ports:
+      - "3322:3322"
+    environment:
+      IMMUDB_MAINTAIN_USER: ${IMMUDB_USER:-immudb}
+      IMMUDB_MAINTAIN_PASSWORD: ${IMMUDB_PASSWORD:-immudb_dev_password}
+    volumes:
+      - immudb_data:/var/lib/immudb
+    networks:
+      - recoverai-network
+    healthcheck:
+      test: ["CMD", "immudb", "version"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # RegTech Policy Engine: Open Policy Agent (OPA)
+  # ---------------------------------------------------------------------------
+  opa:
+    image: openpolicyagent/opa:0.65.0
+    container_name: recoverai-opa
+    restart: unless-stopped
+    command:
+      - "run"
+      - "--server"
+      - "--log-level=info"
+      - "--addr=0.0.0.0:8181"
+      - "/policies"
+    volumes:
+      - ./policies:/policies:ro
+    ports:
+      - "8181:8181"
+    networks:
+      - recoverai-network
+    healthcheck:
+      test: ["CMD", "/opa", "version"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # FastAPI Ingestion & Management Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: recoverai-backend
+    restart: unless-stopped
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - DATABASE_URL=postgresql+asyncpg://recovery_admin:recovery_pass_secure_dev@postgres:5432/recovery_db
+      - TEMPORAL_HOST=temporal:7233
+      - OPA_URL=http://opa:8181/v1/data/recoverai/governance/allow
+      - IMMUDB_HOST=immudb
+    networks:
+      - recoverai-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      immudb:
+        condition: service_healthy
+      opa:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Temporal Standalone Worker Node
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: recoverai-worker
+    restart: unless-stopped
+    command: python -m backend.app.workflows.worker
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - DATABASE_URL=postgresql+asyncpg://recovery_admin:recovery_pass_secure_dev@postgres:5432/recovery_db
+      - TEMPORAL_HOST=temporal:7233
+      - OPA_URL=http://opa:8181/v1/data/recoverai/governance/allow
+      - IMMUDB_HOST=immudb
+    networks:
+      - recoverai-network
+    depends_on:
+      temporal:
+        condition: service_started
+      backend:
+        condition: service_started

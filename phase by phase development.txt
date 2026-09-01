@@ -1,0 +1,162 @@
+PHASE 0 — SPECIFICATION
+        │
+        ├── 01 Problem Statement
+        ├── 02 Solution
+        ├── 03 Architecture
+        ├── 04 Data Flow
+        ├── 05 API Contract
+        ├── 06 Razorpay Contract
+        ├── 07 AI Agent
+        ├── 08 Revenue Risk
+        ├── 09 Governance
+        ├── 10 Temporal Workflow
+        ├── 11 Audit
+        ├── 12 Evaluation
+        ├── 13 Dashboard
+        ├── 14 Security
+        ├── 15 Testing
+        ├── 16 Deployment
+        └── 17 Demo
+                 │
+                 ▼
+PHASE 1 — PROJECT SCAFFOLD
+        │
+        ├── README
+        ├── requirements.txt
+        ├── .env.example
+        ├── Docker
+        └── folder structure
+                 │
+                 ▼
+PHASE 2 — RAZORPAY INTEGRATION
+                 │
+                 ▼
+PHASE 3 — CORE RECOVERY ENGINE
+                 │
+                 ▼
+PHASE 4 — AI
+                 │
+                 ▼
+PHASE 5 — GOVERNANCE
+                 │
+                 ▼
+PHASE 6 — EXECUTION
+                 │
+                 ▼
+PHASE 7 — AUDIT
+                 │
+                 ▼
+PHASE 8 — BATCH EVALUATION
+                 │
+                 ▼
+PHASE 9 — DASHBOARD
+                 │
+                 ▼
+PHASE 10 — DEPLOYMENT
+                 │
+                 ▼
+PHASE 11 — DEMO + FINAL SUBMISSION
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PHASE 1
+Configuration + application bootstrap
+        ↓
+FastAPI health endpoint
+        ↓
+PostgreSQL connection
+        ↓
+SQLAlchemy models
+        ↓
+Alembic migration
+
+PHASE 2
+Razorpay webhook verification
+        ↓
+Event normalization
+        ↓
+Database persistence
+
+PHASE 3
+Revenue Risk Engine
+        ↓
+Failure diagnosis
+        ↓
+Risk scoring
+
+PHASE 4
+AI Agent
+        ↓
+Structured RecoveryDecision
+        ↓
+Langfuse tracing
+
+PHASE 5
+OPA Governance
+        ↓
+AI proposal
+        ↓
+Policy evaluation
+        ↓
+ALLOW / MODIFY / BLOCK
+
+PHASE 6
+Temporal
+        ↓
+Recovery workflow
+        ↓
+Retry / notify / escalate
+        ↓
+Outcome tracking
+
+PHASE 7
+immudb audit trail
+        ↓
+Cryptographic audit record
+
+PHASE 8
+Batch simulator
+        ↓
+50–100 failed subscriptions
+        ↓
+Recovery experiments
+        ↓
+₹ recovered metrics
+
+PHASE 9
+React dashboard
+        ↓
+Recovery funnel
+        ↓
+Cause breakdown
+        ↓
+₹ recovered
+        ↓
+Audit drill-down
+        ↓
+Governance panel
+
+PHASE 10
+Full end-to-end testing
+        ↓
+48-hour demo scenario

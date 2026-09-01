@@ -1,0 +1,80 @@
+# ==============================================================================
+# RecoverAI: Monorepo .gitignore
+# Razorpay AI Buildathon — Track 3 (AI Revenue Recovery)
+# ==============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyo
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Secrets & Local Override Files (DO NOT COMMIT SECRETS)
+.env
+.env.local
+.env.*.local
+*.env.local
+secrets/
+credentials/
+*.pem
+*.key
+*.crt
+
+# Exception: Always track environment template
+!.env.example
+
+# Testing, Coverage & Linting Artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.nox/
+.ruff_cache/
+.mypy_cache/
+
+# Frontend / Node.js Dependencies & Build Outputs
+node_modules/
+dist/
+build/
+.vite/
+*.timestamp-*.mjs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database & Local Runtime Data Stores
+postgres_data/
+temporal_data/
+immudb_data/
+docker/data/
+*.db
+*.sqlite
+*.sqlite3
+
+# IDEs & Code Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

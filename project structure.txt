@@ -1,0 +1,135 @@
+razorpay-revenue-recovery/
+│
+├── README.md
+├── requirements.txt
+├── .env.example
+├── .gitignore
+├── docker-compose.yml
+│
+├── docs/
+│   ├── 01-problem-statement.md
+│   ├── 02-solution-overview.md
+│   ├── 03-system-architecture.md
+│   ├── 04-data-flow.md
+│   ├── 05-api-contract.md
+│   ├── 06-razorpay-integration.md
+│   ├── 07-ai-agent-design.md
+│   ├── 08-revenue-risk-engine.md
+│   ├── 09-governance-and-policies.md
+│   ├── 10-recovery-workflows.md
+│   ├── 11-audit-trail.md
+│   ├── 12-batch-evaluation.md
+│   ├── 13-dashboard-specification.md
+│   ├── 14-security.md
+│   ├── 15-testing-strategy.md
+│   ├── 16-deployment.md
+│   └── 17-demo-script.md
+│
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   │
+│   │   ├── api/
+│   │   │   ├── webhooks.py
+│   │   │   ├── dashboard.py
+│   │   │   ├── recovery.py
+│   │   │   └── health.py
+│   │   │
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   ├── security.py
+│   │   │   └── logging.py
+│   │   │
+│   │   ├── models/
+│   │   │   ├── payment.py
+│   │   │   ├── subscription.py
+│   │   │   ├── recovery_case.py
+│   │   │   ├── audit_event.py
+│   │   │   └── policy_decision.py
+│   │   │
+│   │   ├── schemas/
+│   │   │   ├── webhook.py
+│   │   │   ├── recovery.py
+│   │   │   ├── diagnosis.py
+│   │   │   └── dashboard.py
+│   │   │
+│   │   ├── services/
+│   │   │   ├── razorpay_service.py
+│   │   │   ├── risk_service.py
+│   │   │   ├── diagnosis_service.py
+│   │   │   ├── recovery_service.py
+│   │   │   ├── notification_service.py
+│   │   │   └── audit_service.py
+│   │   │
+│   │   ├── ai/
+│   │   │   ├── agent.py
+│   │   │   ├── prompts.py
+│   │   │   ├── schemas.py
+│   │   │   └── evaluator.py
+│   │   │
+│   │   ├── policy/
+│   │   │   ├── engine.py
+│   │   │   ├── policies/
+│   │   │   │   ├── retry_policy.json
+│   │   │   │   ├── escalation_policy.json
+│   │   │   │   └── stopping_policy.json
+│   │   │   └── opa/
+│   │   │       └── recovery.rego
+│   │   │
+│   │   ├── temporal/
+│   │   │   ├── client.py
+│   │   │   ├── workflows.py
+│   │   │   └── activities.py
+│   │   │
+│   │   ├── db/
+│   │   │   ├── database.py
+│   │   │   └── repositories/
+│   │   │       ├── payment_repository.py
+│   │   │       ├── recovery_repository.py
+│   │   │       └── audit_repository.py
+│   │   │
+│   │   └── audit/
+│   │       └── immudb_client.py
+│   │
+│   └── tests/
+│       ├── unit/
+│       ├── integration/
+│       ├── workflows/
+│       └── fixtures/
+│
+├── frontend/
+│   ├── package.json
+│   ├── vite.config.js
+│   └── src/
+│       ├── components/
+│       │   ├── RevenueRiskCard.jsx
+│       │   ├── RecoveryFunnel.jsx
+│       │   ├── RecoveryMetrics.jsx
+│       │   ├── CauseBreakdown.jsx
+│       │   ├── CompliancePanel.jsx
+│       │   ├── AuditLogTable.jsx
+│       │   └── RecoveryCase.jsx
+│       │
+│       ├── pages/
+│       │   ├── Dashboard.jsx
+│       │   └── CaseDetails.jsx
+│       │
+│       ├── api/
+│       │   └── client.js
+│       │
+│       └── App.jsx
+│
+├── simulator/
+│   ├── generate_failures.py
+│   ├── generate_batch.py
+│   ├── baseline.py
+│   └── scenarios/
+│       ├── insufficient_funds.json
+│       ├── payment_method_issue.json
+│       ├── repeated_failure.json
+│       └── unknown_failure.json
+│
+└── scripts/
+    ├── seed_database.py
+    ├── run_demo.py
+    └── run_evaluation.py
