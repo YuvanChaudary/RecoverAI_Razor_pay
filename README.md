@@ -322,9 +322,9 @@ RecoverAI maps all raw payment gateway error codes from Razorpay, Visa, Masterca
 
 | Normalized Category | Raw Gateway Error Codes | Root Cause Diagnosis | Autonomous AI Strategy | OPA Governance Constraints |
 |---|---|---|---|---|
-| **`LIQUIDITY_FRICTION`** | `INSUFFICIENT_FUNDS`, `low_balance`, `limit_exceeded` | Customer account temporarily has insufficient balance. | Smart smart-retry scheduled around salary/payday windows (1st/5th of month). | Cooldown $\ge$ 24h; Max 3 retries; Pre-debit notice check. |
+| **`LIQUIDITY_FRICTION`** | `INSUFFICIENT_FUNDS`, `low_balance`, `limit_exceeded` | Customer account temporarily has insufficient balance. | Smart-retry scheduled around salary/payday windows (1st/5th of month). | Cooldown ≥ 24h; Max 3 retries; Pre-debit notice check. |
 | **`INSTRUMENT_INVALIDATION`** | `EXPIRED_CARD`, `card_inactive`, `invalid_card_number` | Payment card expired, canceled, or replaced. | **Zero retries.** Immediate interactive Payment Link dispatched via WhatsApp/SMS. | Retries strictly prohibited (`RULE-003`); Send link permitted. |
-| **`TRANSIENT_INFRASTRUCTURE`** | `GATEWAY_TIMEOUT`, `network_error`, `bank_timeout` | Temporary network glitch between bank switch and gateway. | Exponential backoff retry after short cooldown (2h to 24h). | Cooldown $\ge$ 2h; Max 3 retries. |
+| **`TRANSIENT_INFRASTRUCTURE`** | `GATEWAY_TIMEOUT`, `network_error`, `bank_timeout` | Temporary network glitch between bank switch and gateway. | Exponential backoff retry after short cooldown (2h to 24h). | Cooldown ≥ 2h; Max 3 retries. |
 | **`MANDATE_COMPLIANCE_LOCK`** | `MANDATE_EXPIRED`, `frequency_breached`, `mandate_inactive` | RBI e-mandate registration expired or threshold exceeded. | Re-authorization workflow; Customer prompted to accept new SI mandate. | Direct automated retries blocked until mandate re-validated. |
 | **`BANK_RISK_BLOCK`** | `BANK_DECLINE`, `risk_threshold_exceeded`, `fraud_suspected` | Issuing bank risk engine flagged transaction. | Soft non-retry notification asking customer to approve via banking app. | Retries prohibited until bank clearance. |
 | **`UNKNOWN`** | Unrecognized error strings | Unclassified failure code. | Conservative fallback to manual escalation queue. | Fail-closed security rule applied. |
@@ -444,7 +444,9 @@ sequenceDiagram
 
 Every inbound webhook is verified against Razorpay's HMAC-SHA256 signature specification before JSON parsing:
 
-$$\text{HMAC-SHA256}(\text{raw\_payload}, \text{RAZORPAY\_WEBHOOK\_SECRET}) \stackrel{?}{=} \text{X-Razorpay-Signature}$$
+```text
+HMAC_SHA256(raw_payload, RAZORPAY_WEBHOOK_SECRET) == X-Razorpay-Signature
+```
 
 ```python
 # Verified constant-time signature comparison prevents timing attacks
@@ -460,7 +462,7 @@ if not hmac.compare_digest(computed_hmac, header_signature):
 
 ### Idempotency & Zero Double-Recovery Guarantee:
 If Razorpay delivers the same `payment.captured` webhook multiple times (common during network retries):
-* **1st Delivery:** State transitions `AWAITING_SETTLEMENT` $\to$ `RECOVERED`. ₹8,500 credited.
+* **1st Delivery:** State transitions `AWAITING_SETTLEMENT` → `RECOVERED`. ₹8,500 credited.
 * **2nd Delivery:** State machine recognizes `state == RECOVERED`. Flags transaction as **`Idempotent No-Op`**. Exactly **₹0.00 additional paise** are credited.
 * **Verified Metric:** **0 Double Recoveries | 0 Double-Counted Paise.**
 
@@ -470,11 +472,13 @@ If Razorpay delivers the same `payment.captured` webhook multiple times (common 
 
 Every governance evaluation, state change, and financial settlement produces an immutable cryptographic receipt in **immudb**:
 
-$$\text{Digest} = \text{SHA-256}(\text{Canonical\_JSON}(\text{AuditEvent}))$$
+```text
+Payload Digest = SHA-256( Canonical_JSON( AuditEvent ) )
+```
 
 ```mermaid
 flowchart TD
-    E[AuditEvent: Case #882 Transition -> RECOVERED]
+    E["AuditEvent: Case #882 Transition -> RECOVERED"]
     E --> H[Canonical SHA-256 Hash Computation]
     H --> L[(immudb Append-Only Merkle Ledger)]
     
@@ -499,17 +503,19 @@ RecoverAI adheres strictly to integer paise precision for all financial accounti
 
 ### Core Equations:
 
-1. **Integer Paise Conversion:**
-   $$\text{amount\_paise} = \text{round}(\text{amount\_inr} \times 100)$$
+```text
+1. Integer Paise Conversion:
+   amount_paise = round(amount_inr * 100)
 
-2. **Total Revenue at Risk ($R_{\text{risk}}$):**
-   $$R_{\text{risk}} = \sum_{i=1}^{N} \text{case}_i.\text{amount\_paise}$$
+2. Total Revenue at Risk:
+   Revenue_At_Risk = Sum( case_i.amount_paise for i in 1..N )
 
-3. **Total Authoritative Recovered ($R_{\text{rec}}$):**
-   $$R_{\text{rec}} = \sum_{j \in \text{Settled}} \text{settlement}_j.\text{recovered\_amount\_paise}$$
+3. Total Authoritative Recovered:
+   Recovered_Amount = Sum( settlement_j.recovered_amount_paise for j in Settled_Cases )
 
-4. **Measured Recovery Rate ($\rho$):**
-   $$\rho = \begin{cases} \left( \frac{R_{\text{rec}}}{R_{\text{risk}}} \right) \times 100, & \text{if } R_{\text{risk}} > 0 \\ 0.0, & \text{otherwise} \end{cases}$$
+4. Measured Recovery Rate (%):
+   Recovery_Rate = (Recovered_Amount / Revenue_At_Risk) * 100   [if Revenue_At_Risk > 0, else 0.0]
+```
 
 ---
 
@@ -520,9 +526,9 @@ To benchmark recovery performance across varied portfolio conditions, RecoverAI 
 | Simulation Metric | Seed 42 Benchmark Result | Mathematical & Governance Invariant |
 |---|---|---|
 | **Total Cases Evaluated** | **500** | 100% evaluated across 6 failure categories |
-| **Total Revenue at Risk** | **₹2,52,38,426.32** ($252,384,2632\text{ paise}$) | Integer paise precision verified |
-| **Simulated Recovery Achieved** | **₹85,65,745.32** ($856,574,532\text{ paise}$) | Synthetic recovery modeling |
-| **Simulated Recovery Rate** | **33.94%** | $\frac{8,565,745.32}{25,238,426.32} \times 100$ |
+| **Total Revenue at Risk** | **₹2,52,38,426.32** (25,238,426.32 INR / 2,523,842,632 paise) | Integer paise precision verified |
+| **Simulated Recovery Achieved** | **₹85,65,745.32** (8,565,745.32 INR / 856,574,532 paise) | Synthetic recovery modeling |
+| **Simulated Recovery Rate** | **33.94%** | (8,565,745.32 / 25,238,426.32) × 100 |
 | **OPA Policy Approvals** | **307 (61.4%)** | Compliant with cooldown & retry caps |
 | **OPA Policy Denials** | **193 (38.6%)** | Blocked high-risk / invalid retries |
 | **Terminal Declines Filtered** | **36** | 100% prevented from blind retry |
@@ -573,7 +579,7 @@ The RecoverAI frontend is built with React 18 and Vite, featuring dark-mode fint
 | **Duplicate Webhook Replay** | High | FSM idempotency tracking. Subsequent `payment.captured` webhooks flagged as idempotent no-ops. | **VERIFIED (0 double recoveries)** |
 | **AI Prompt Injection** | High | XML tag encapsulation (`<transaction_context>`), strict Pydantic JSON schema output enforcement. | **VERIFIED (No prompt leakage)** |
 | **AI Retrying Hostile Declines** | High | OPA Rego firewall evaluates policy independently of AI. Prohibits terminal retries. | **VERIFIED (99% AI vetoed by OPA)** |
-| **Runaway Retry Storms** | High | Hard caps (Max 3 retries, $\ge$ 24h cooldown) strictly enforced by OPA `RULE-001` & `RULE-002`. | **VERIFIED (Blocked at 3 retries)** |
+| **Runaway Retry Storms** | High | Hard caps (Max 3 retries, ≥ 24h cooldown) strictly enforced by OPA `RULE-001` & `RULE-002`. | **VERIFIED (Blocked at 3 retries)** |
 | **Audit Log Tampering** | Critical | Append-only immudb ledger with SHA-256 Merkle hash chain. Instant tamper alert on mutation. | **VERIFIED (Tamper detected)** |
 | **Credential Leakage** | Critical | Automated regex secret redaction filter (`RedactingFilter`) on all stdout/stderr logging. | **VERIFIED (0 secrets leaked)** |
 | **Floating-Point Rounding Error** | Medium | Strict integer paise representation across database, state machine, and APIs. | **VERIFIED (All amounts integer paise)** |
@@ -782,7 +788,7 @@ Follow this sequence in the web browser at `http://localhost:3000`:
 1. **Open Dashboard:** Navigate to `http://localhost:3000/`.
 2. **Press "Reset Demo":** Click **🔄 Reset Demo** in the Control Panel. Notice the state resets to `READY` with `₹0.00` active risk and 0 cases.
 3. **Execute 8-Stage Demo:** Click **⚡ Start Demo**. Watch the real-time stepper smoothly advance through all 8 stages:
-   * `DETECTED` $\to$ `DIAGNOSED` (Error mapped) $\to$ `AI DECISION` (Strategy proposed) $\to$ `GOVERNANCE APPROVED` (OPA allow) $\to$ `ACTION SCHEDULED` $\to$ `ACTION EXECUTED` (Recovered: ₹0.00) $\to$ `AWAITING SETTLEMENT` $\to$ `RECOVERED` (HMAC webhook verified, ₹ credited).
+   * `DETECTED` → `DIAGNOSED` (Error mapped) → `AI DECISION` (Strategy proposed) → `GOVERNANCE APPROVED` (OPA allow) → `ACTION SCHEDULED` → `ACTION EXECUTED` (Recovered: ₹0.00) → `AWAITING SETTLEMENT` → `RECOVERED` (HMAC webhook verified, ₹ credited).
 4. **Process Another Transaction:** Click **➕ Process Another Transaction**. A new randomized case is dynamically generated and appended to the table with its own distinct category and amount.
 5. **Inspect Recovery Cases:** Navigate to the **Recovery Cases** tab to view the live case ledger with state badges.
 6. **Inspect AI Decisions:** Navigate to **AI Strategy** to examine the JSON proposal, reasoning, and confidence score.
@@ -837,7 +843,7 @@ python scripts\final_demo.py
 ## 24. Engineering Decisions & Design Rationale
 
 ### Q: Why use integer paise instead of standard floating-point INR?
-> **A:** Floating-point arithmetic (`float`) in programming languages is subject to binary representation rounding errors (e.g., `0.1 + 0.2 = 0.30000000000000004`). In financial systems, accumulating sub-cent rounding errors across millions of transactions leads to ledger corruption. Working in integer paise ($1\text{ INR} = 100\text{ paise}$) guarantees exact mathematical precision at all times.
+> **A:** Floating-point arithmetic (`float`) in programming languages is subject to binary representation rounding errors (e.g., `0.1 + 0.2 = 0.30000000000000004`). In financial systems, accumulating sub-cent rounding errors across millions of transactions leads to ledger corruption. Working in integer paise (1 INR = 100 paise) guarantees exact mathematical precision at all times.
 
 ### Q: Why decouple AI strategy generation from execution using OPA?
 > **A:** Large Language Models are probabilistic and susceptible to prompt injection, hallucination, and drift. Financial recovery is strictly regulated by regulatory authorities (RBI, NPCI). Open Policy Agent (OPA) provides a deterministic, auditable, and unbypassable policy firewall written in declarative Rego. If an AI proposes an invalid retry, OPA guarantees a hard deny.
